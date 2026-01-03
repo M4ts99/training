@@ -1,0 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Hier kommen keine manuellen Farben mehr rein, 
+   da wir alles über Tailwind-Klassen machen. */
