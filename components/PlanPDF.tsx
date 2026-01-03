@@ -3,15 +3,15 @@ import { Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer';
 
 const styles = StyleSheet.create({
   page: { 
-    padding: 40, 
+    padding: 30, 
     backgroundColor: '#050505', 
     color: '#fff', 
     fontFamily: 'Helvetica' 
   },
   debugBox: { 
     position: 'absolute', 
-    top: 20, 
-    right: 20, 
+    top: 15, 
+    right: 15, 
     padding: 5, 
     backgroundColor: '#111', 
     borderWidth: 1, 
@@ -23,35 +23,45 @@ const styles = StyleSheet.create({
     marginBottom: 20, 
     borderBottomWidth: 2, 
     borderColor: '#EA580C', 
-    paddingBottom: 15 
+    paddingBottom: 10 
   },
   title: { 
-    fontSize: 28, 
+    fontSize: 24, 
     fontWeight: 'bold', 
     color: '#EA580C', 
-    letterSpacing: 2 
+    letterSpacing: 1 
   },
   subtitle: { 
     fontSize: 10, 
-    color: '#666', 
+    color: '#aaa', 
     marginTop: 5, 
-    textTransform: 'uppercase',
-    letterSpacing: 1
-  },
-  weekBox: { 
-    marginTop: 20, 
-    marginBottom: 10 
+    textTransform: 'uppercase'
   },
   weekTitle: { 
     fontSize: 14, 
     fontWeight: 'bold', 
-    color: '#EA580C', 
+    color: '#000', 
+    backgroundColor: '#EA580C', 
+    padding: 5, 
     marginBottom: 10, 
-    backgroundColor: '#111', 
-    padding: 6,
-    borderRadius: 4,
+    borderRadius: 2, 
+    textTransform: 'uppercase' 
+  },
+  // Tabellen-Header
+  tableHeader: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderColor: '#EA580C',
+    paddingBottom: 5,
+    marginBottom: 5
+  },
+  headerCol: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#EA580C',
     textTransform: 'uppercase'
   },
+  // Zeilen-Struktur
   dayRow: { 
     flexDirection: 'row', 
     borderBottomWidth: 1, 
@@ -60,112 +70,94 @@ const styles = StyleSheet.create({
     minHeight: 40,
     alignItems: 'flex-start'
   },
-  dayCol: { 
-    width: '15%', 
-    fontSize: 10, 
-    fontWeight: 'bold', 
-    color: '#888' 
-  },
-  activityCol: { 
-    width: '25%', 
-    fontSize: 10, 
-    fontWeight: 'bold', 
-    color: '#fff',
-    paddingRight: 5
-  },
-  detailCol: { 
-    width: '60%', 
-    fontSize: 9, 
-    color: '#ccc', 
-    lineHeight: 1.4,
-    paddingRight: 10
-  },
+  colDay: { width: '12%' },
+  colType: { width: '18%' },
+  colInt: { width: '15%' }, // NEUE SPALTE für Intensität/HF/RPE
+  colDet: { width: '55%' },
+  
+  text: { fontSize: 9, color: '#ccc' },
+  bold: { fontWeight: 'bold', color: '#fff' },
+  
   footer: { 
     position: 'absolute', 
     bottom: 20, 
-    left: 40, 
-    right: 40, 
-    fontSize: 8, 
+    left: 30, 
+    right: 30, 
+    fontSize: 7, 
     textAlign: 'center', 
     color: '#444', 
     borderTopWidth: 1, 
     borderColor: '#222', 
-    paddingTop: 10 
+    paddingTop: 8 
   }
 });
 
 export function PlanPDF({ data }: { data: any }) {
-  // INTELLIGENTE SUCHE: Wir prüfen alle möglichen Keys, die die KI nutzen könnte
+  // Unterstützung für verschiedene Key-Namen der KI
   const weeksArray = data?.trainingPlan || data?.trainingsplan || data?.weeks || data?.plan;
 
-  // 1. Sicherheits-Check
   if (!data || !weeksArray || !Array.isArray(weeksArray)) {
     return (
       <Document>
         <Page size="A4" style={styles.page}>
-          <Text style={styles.title}>DATEN-FEHLER</Text>
-          <Text style={{fontSize: 12, marginTop: 20}}>
-            Die KI hat Daten gesendet, aber unter einem unbekannten Namen.
-          </Text>
-          <Text style={{fontSize: 10, color: '#EA580C', marginTop: 10}}>
-            Gefundene Keys im Datensatz: {Object.keys(data || {}).join(', ')}
-          </Text>
+          <Text>Daten werden verarbeitet oder sind fehlerhaft...</Text>
         </Page>
       </Document>
     );
   }
 
   return (
-    <Document title={`PacePilot Plan`}>
-      <Page size="A4" style={styles.page} wrap>
-        
-        {/* DEBUG INFO */}
-        {data.debug && (
-          <View style={styles.debugBox} fixed>
-            <Text>MOD: {data.debug.model}</Text>
-            <Text>IN: {data.debug.inputTokens} tkn</Text>
-            <Text>OUT: {data.debug.outputTokens} tkn</Text>
+    <Document title="PacePilot Trainingsplan">
+      {weeksArray.map((week: any, i: number) => (
+        <Page key={i} size="A4" style={styles.page}>
+          
+          {/* DEBUG INFO (Tokens) - Nur auf der ersten Seite */}
+          {i === 0 && data.debug && (
+            <View style={styles.debugBox}>
+              <Text>MOD: {data.debug.model} | IN: {data.debug.inputTokens} | OUT: {data.debug.outputTokens}</Text>
+            </View>
+          )}
+
+          {/* Header mit Ziel-Vision */}
+          <View style={styles.header}>
+            <Text style={styles.title}>PACEPILOT PRO</Text>
+            <Text style={styles.subtitle}>
+              ZIEL: {data.target || 'MARATHON'} | PACE: {data.targetPace || '--:--'} MIN/KM | ZEIT: {data.targetTime || '--:--:--'}
+            </Text>
           </View>
-        )}
 
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>PACEPILOT PRO</Text>
-          <Text style={styles.subtitle}>Individueller Performance-Plan • Ziel: {data.target || 'Training'}</Text>
-          <Text style={{ fontSize: 8, color: '#EA580C', marginTop: 4 }}>
-            Umfang: {weeksArray.length} Wochen Trainingsplan
-          </Text>
-        </View>
+          <Text style={styles.weekTitle}>Trainingswoche {week.weekNumber || i + 1}</Text>
 
-        {/* ÄUẞERE SCHLEIFE: Durch die Wochen gehen */}
-        {weeksArray.map((week: any, i: number) => (
-          <View key={i} style={styles.weekBox} wrap={false}>
-            <Text style={styles.weekTitle}>Woche {week.weekNumber || i + 1}</Text>
-            
-            {/* INNERE SCHLEIFE: Durch die Tage gehen */}
-            {week.days && Array.isArray(week.days) ? (
-              week.days.map((day: any, j: number) => (
-                <View key={j} style={styles.dayRow}>
-                  <Text style={styles.dayCol}>{day.day || "Tag"}</Text>
-                  <Text style={styles.activityCol}>{day.activity || "Aktivität"}</Text>
-                  <Text style={styles.detailCol}>{day.detail || "Regeneration"}</Text>
-                </View>
-              ))
-            ) : (
-              <Text style={{ color: 'red', fontSize: 10 }}>Keine Tagesdaten gefunden.</Text>
-            )}
+          {/* Tabellen-Kopf */}
+          <View style={styles.tableHeader}>
+            <Text style={[styles.headerCol, styles.colDay]}>Tag</Text>
+            <Text style={[styles.headerCol, styles.colType]}>Art</Text>
+            <Text style={[styles.headerCol, styles.colInt]}>Intensität</Text>
+            <Text style={[styles.headerCol, styles.colDet]}>Details & Vorgaben</Text>
           </View>
-        ))}
 
-        {/* Footer */}
-        <Text 
-          style={styles.footer} 
-          fixed 
-          render={({ pageNumber, totalPages }) => (
-            `Seite ${pageNumber} / ${totalPages} • Generiert von PacePilot AI • Wissenschaftliche Richtwerte`
-          )} 
-        />
-      </Page>
+          {/* Tage-Mapping */}
+          {week.days?.map((day: any, j: number) => (
+            <View key={j} style={styles.dayRow}>
+              <Text style={[styles.text, styles.colDay, styles.bold]}>{day.day}</Text>
+              <Text style={[styles.text, styles.colType]}>{day.activity}</Text>
+              <Text style={[styles.text, styles.colInt, { color: '#EA580C' }]}>
+                {day.intensity || '---'}
+              </Text>
+              <Text style={[styles.text, styles.colDet]}>{day.detail}</Text>
+            </View>
+          ))}
+
+          {/* Footer mit Seitenzahlen */}
+          <Text 
+            style={styles.footer} 
+            fixed 
+            render={({ pageNumber, totalPages }) => (
+              `Seite ${pageNumber} von ${totalPages} • Generiert von PacePilot AI • {data.target} Plan`
+            )} 
+          />
+        </Page>
+      ))}
     </Document>
   );
 }
