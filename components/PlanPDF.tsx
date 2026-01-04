@@ -96,6 +96,54 @@ export function PlanPDF({ data }: { data: any }) {
   // Unterstützung für verschiedene Key-Namen der KI
   const weeksArray = data?.trainingPlan || data?.trainingsplan || data?.weeks || data?.plan;
 
+  const parseTimeToSeconds = (t: any) => {
+    if (!t) return null;
+    const s = String(t).trim();
+    if (!s) return null;
+    const parts = s.split(':').map((p) => parseInt(p, 10));
+    if (parts.length === 3) return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+    if (parts.length === 2) return (parts[0] || 0) * 60 + (parts[1] || 0);
+    if (parts.length === 1) return parts[0] || 0;
+    return null;
+  };
+
+  const computePace = (d: any) => {
+    if (!d) return null;
+    if (d.targetPace) return d.targetPace;
+    const timeStr = d.targetTimeFormatted || d.targetTime || d.target_time;
+    const secs = parseTimeToSeconds(timeStr);
+    if (!secs) return null;
+    const distMap: Record<string, number> = { '5km': 5, '10km': 10, 'Halbmarathon': 21.0975, 'Marathon': 42.195 };
+    let dist = distMap[d.target] || distMap[d.distance] || null;
+    if (!dist && d.distance && typeof d.distance === 'string') {
+      const num = parseFloat(d.distance.replace(/[a-zA-Z]/g, ''));
+      if (!isNaN(num) && num > 0) dist = num;
+    }
+    if (!dist) return null;
+    const paceSec = Math.round(secs / dist);
+    const mm = Math.floor(paceSec / 60);
+    const ss = paceSec % 60;
+    return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+  };
+
+  const renderStrengthLabel = (d: any) => {
+    if (!d || !d.includeStrength) return 'Nein';
+    const eq = d.equipment || d.equipmentType || '';
+    if (!eq || eq === 'Keines' || /keine|keines|bodyweight/i.test(String(eq))) return 'Ja, ohne Gym';
+    if (/gewichte|eigengewicht/i.test(String(eq))) return 'Ja, mit Eigengewicht';
+    if (/gym|fitnessstudio/i.test(String(eq))) return 'Ja, mit Fitnessstudio';
+    return `Ja (${eq})`;
+  };
+
+  const formatPace = (p: any) => {
+    if (!p) return '--:--';
+    if (typeof p === 'string') return p;
+    if (p.m !== undefined || p.s !== undefined) return `${String(p.m||'0').padStart(2,'0')}:${String(p.s||'0').padStart(2,'0')}`;
+    if (p.min !== undefined || p.sec !== undefined) return `${String(p.min||'0').padStart(2,'0')}:${String(p.sec||'0').padStart(2,'0')}`;
+    if (p.minutes !== undefined || p.seconds !== undefined) return `${String(p.minutes||'0').padStart(2,'0')}:${String(p.seconds||'0').padStart(2,'0')}`;
+    return '--:--';
+  };
+
   if (!data || !weeksArray || !Array.isArray(weeksArray)) {
     return (
       <Document>
@@ -121,12 +169,18 @@ export function PlanPDF({ data }: { data: any }) {
           {/* Header mit Ziel-Vision */}
           <View style={styles.header}>
             <Text style={styles.title}>PACEPILOT PRO</Text>
-            <Text style={styles.subtitle}>
-              ZIEL: {data.target || 'MARATHON'} | PACE: {data.targetPace || '--:--'} MIN/KM | ZEIT: {data.targetTime || '--:--:--'}
-            </Text>
+            {i === 0 ? (
+              <>
+                <Text style={styles.subtitle}>Ziel Distanz: {data.target || data.distance || '-'}</Text>
+                <Text style={styles.subtitle}>Ziel Zeit: {data.targetTime || data.targetTimeFormatted || '--:--:--'}</Text>
+                <Text style={styles.subtitle}>Ziel Pace: {data.targetPace || computePace(data) || '--:--' } min/km</Text>
+              </>
+            ) : (
+              <Text style={styles.subtitle}>{data.target || data.distance || ''}</Text>
+            )}
           </View>
 
-          <Text style={styles.weekTitle}>Trainingswoche {week.weekNumber || i + 1}</Text>
+              <Text style={styles.weekTitle}>Trainingswoche {week.weekNumber || i + 1} — Wochenkilometer: {week.weeklyKm || week.weekly_km || week.weekly_km_per_week || data.targetWeeklyKm || data.target_weekly_km || data.target_weeklyKm || '-'}</Text>
 
           {/* Tabellen-Kopf */}
           <View style={styles.tableHeader}>
@@ -135,6 +189,22 @@ export function PlanPDF({ data }: { data: any }) {
             <Text style={[styles.headerCol, styles.colInt]}>Intensität</Text>
             <Text style={[styles.headerCol, styles.colDet]}>Details & Vorgaben</Text>
           </View>
+
+          {/* Extra: Auf der ersten Seite Zusammenfassung (PRs, Kraft, Dehnen) */}
+          {i === 0 && (
+            <View style={{ marginBottom: 10 }}>
+              <Text style={[styles.text, { marginBottom: 4 }]}>Zusammenfassung</Text>
+              <Text style={styles.text}>Krafttraining: {renderStrengthLabel(data)}</Text>
+              <Text style={styles.text}>Dehnen / Mobility: {data.includeStretching ? 'Ja' : 'Nein'}</Text>
+              {data.zone2Pace && (
+                <Text style={styles.text}>Zone-2 Pace: {formatPace(data.zone2Pace)} — bei {data.zone2Type === 'hr' ? '70%' : `Anstrengung ${data.zone2Value || '-'} /10`}</Text>
+              )}
+              {data.pr5k && data.pr5k !== '' && <Text style={styles.text}>PB 5km: {data.pr5k}</Text>}
+              {data.pr10k && data.pr10k !== '' && <Text style={styles.text}>PB 10km: {data.pr10k}</Text>}
+              {data.prHalf && data.prHalf !== '' && <Text style={styles.text}>PB Halbmarathon: {data.prHalf}</Text>}
+              {data.prMarathon && data.prMarathon !== '' && <Text style={styles.text}>PB Marathon: {data.prMarathon}</Text>}
+            </View>
+          )}
 
           {/* Tage-Mapping */}
           {week.days?.map((day: any, j: number) => (
@@ -149,12 +219,12 @@ export function PlanPDF({ data }: { data: any }) {
           ))}
 
           {/* Footer mit Seitenzahlen */}
-          <Text 
-            style={styles.footer} 
-            fixed 
+          <Text
+            style={styles.footer}
+            fixed
             render={({ pageNumber, totalPages }) => (
-              `Seite ${pageNumber} von ${totalPages} • Generiert von PacePilot AI • {data.target} Plan`
-            )} 
+              `Seite ${pageNumber} von ${totalPages} • Generiert von PacePilot AI • ${data.target || data.distance || ''} Plan`
+            )}
           />
         </Page>
       ))}

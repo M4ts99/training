@@ -25,6 +25,10 @@ export default function PacePilot() {
     prMarathon: { h: "", m: "", s: "" },
     currentPace: "06:00",
     currentWeeklyVolume: "20",
+    // Zone-2 Pace / aktuelle Belastung
+    zone2Pace: { m: "06", s: "00" },
+    zone2Type: 'hr', // 'hr' or 'rpe'
+    zone2Value: '70', // percent or RPE value
     
     // Schritt 3: Biometrie
     useHeartRate: true,
@@ -333,6 +337,41 @@ export default function PacePilot() {
               <label className="block text-xs font-bold text-zinc-500 uppercase">Aktuelles Wochen-Pensum (km)</label>
               <input type="number" className="w-full bg-zinc-900 p-5 rounded-2xl border border-zinc-800 font-bold" value={form.currentWeeklyVolume} onChange={(e) => setForm({...form, currentWeeklyVolume: e.target.value})} />
             </div>
+            <div className="space-y-4">
+              <label className="block text-xs font-bold text-zinc-500 uppercase">Zone-2 Pace (aktuell)</label>
+              <div className="flex items-center gap-2">
+                <input type="number" min={0} max={99} className="w-20 bg-black p-2 rounded text-center font-bold" value={form.zone2Pace.m} onChange={(e) => setForm({...form, zone2Pace: {...form.zone2Pace, m: e.target.value}})} />
+                <span className="text-zinc-500">:</span>
+                <input type="number" min={0} max={59} className="w-20 bg-black p-2 rounded text-center font-bold" value={form.zone2Pace.s} onChange={(e) => setForm({...form, zone2Pace: {...form.zone2Pace, s: e.target.value}})} />
+                <div className="ml-4 flex items-center gap-2">
+                  <select className="bg-zinc-900 p-2 rounded" value={form.zone2Type} onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === 'hr') {
+                      setForm({...form, zone2Type: 'hr', zone2Value: '70'});
+                    } else {
+                      setForm({...form, zone2Type: 'rpe', zone2Value: '6'});
+                    }
+                  }}>
+                    <option value="hr">HF %</option>
+                    <option value="rpe">Anstrengung (RPE)</option>
+                  </select>
+                  {form.zone2Type === 'hr' ? (
+                    <div className="w-20 bg-zinc-900 p-2 rounded text-center font-bold">70 %</div>
+                  ) : (
+                    <input type="number" min={1} max={10} className="w-20 bg-black p-2 rounded text-center font-bold" value={form.zone2Value} onChange={(e) => {
+                      let v = e.target.value.replace(/[^0-9]/g, '');
+                      if (v === '') v = '';
+                      let n = parseInt(v || '0', 10);
+                      if (isNaN(n)) n = 0;
+                      if (n < 1) n = 1;
+                      if (n > 10) n = 10;
+                      setForm({...form, zone2Value: String(n)});
+                    }} />
+                  )}
+                </div>
+              </div>
+              <div className="text-[10px] text-zinc-500 italic">z. B. Pace bei 70% HF oder Anstrengung 6/10</div>
+            </div>
             <div className="flex gap-4">
               <button onClick={() => setStep(1)} className="p-5 bg-zinc-900 rounded-2xl border border-zinc-800"><ChevronLeft/></button>
               <button onClick={() => setStep(3)} className="flex-1 bg-white text-black py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-2">Biometrie <ChevronRight/></button>
@@ -502,6 +541,12 @@ export default function PacePilot() {
                   {hasPR((form as any).prMarathon) && <div className="font-black">{formatPR((form as any).prMarathon)}</div>}
                   {form.useHeartRate && <div className="text-zinc-400 text-sm">Max HR / Ruhepuls</div>}
                   {form.useHeartRate && <div className="font-black">{form.maxHR} / {form.restHR}</div>}
+                  {form.zone2Pace && (
+                    <>
+                      <div className="text-zinc-400 text-sm">Zone-2 Pace</div>
+                      <div className="font-black">{`${String(form.zone2Pace.m).padStart(2,'0')}:${String(form.zone2Pace.s).padStart(2,'0')} — bei ${form.zone2Type === 'hr' ? form.zone2Value + '%' : 'Anstrengung ' + form.zone2Value + '/10'}`}</div>
+                    </>
+                  )}
                 </div>
               </div>
 
