@@ -2,50 +2,50 @@ import React from 'react';
 import { Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer';
 
 const styles = StyleSheet.create({
-  page: { 
-    padding: 30, 
-    backgroundColor: '#050505', 
-    color: '#fff', 
-    fontFamily: 'Helvetica' 
+  page: {
+    padding: 30,
+    backgroundColor: '#050505',
+    color: '#fff',
+    fontFamily: 'Helvetica'
   },
-  debugBox: { 
-    position: 'absolute', 
-    top: 15, 
-    right: 15, 
-    padding: 5, 
-    backgroundColor: '#111', 
-    borderWidth: 1, 
+  debugBox: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    padding: 5,
+    backgroundColor: '#111',
+    borderWidth: 1,
     borderColor: '#333',
     fontSize: 7,
     color: '#555'
   },
-  header: { 
-    marginBottom: 20, 
-    borderBottomWidth: 2, 
-    borderColor: '#EA580C', 
-    paddingBottom: 10 
+  header: {
+    marginBottom: 20,
+    borderBottomWidth: 2,
+    borderColor: '#EA580C',
+    paddingBottom: 10
   },
-  title: { 
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    color: '#EA580C', 
-    letterSpacing: 1 
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#EA580C',
+    letterSpacing: 1
   },
-  subtitle: { 
-    fontSize: 10, 
-    color: '#aaa', 
-    marginTop: 5, 
+  subtitle: {
+    fontSize: 10,
+    color: '#aaa',
+    marginTop: 5,
     textTransform: 'uppercase'
   },
-  weekTitle: { 
-    fontSize: 14, 
-    fontWeight: 'bold', 
-    color: '#000', 
-    backgroundColor: '#EA580C', 
-    padding: 5, 
-    marginBottom: 10, 
-    borderRadius: 2, 
-    textTransform: 'uppercase' 
+  weekTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#000',
+    backgroundColor: '#EA580C',
+    padding: 5,
+    marginBottom: 10,
+    borderRadius: 2,
+    textTransform: 'uppercase'
   },
   // Tabellen-Header
   tableHeader: {
@@ -62,10 +62,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase'
   },
   // Zeilen-Struktur
-  dayRow: { 
-    flexDirection: 'row', 
-    borderBottomWidth: 1, 
-    borderColor: '#222', 
+  dayRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderColor: '#222',
     paddingVertical: 8,
     minHeight: 40,
     alignItems: 'flex-start'
@@ -74,27 +74,68 @@ const styles = StyleSheet.create({
   colType: { width: '18%' },
   colInt: { width: '15%' }, // NEUE SPALTE für Intensität/HF/RPE
   colDet: { width: '55%' },
-  
+
   text: { fontSize: 9, color: '#ccc' },
   bold: { fontWeight: 'bold', color: '#fff' },
-  
-  footer: { 
-    position: 'absolute', 
-    bottom: 20, 
-    left: 30, 
-    right: 30, 
-    fontSize: 7, 
-    textAlign: 'center', 
-    color: '#444', 
-    borderTopWidth: 1, 
-    borderColor: '#222', 
-    paddingTop: 8 
+
+  footer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 30,
+    right: 30,
+    fontSize: 7,
+    textAlign: 'center',
+    color: '#444',
+    borderTopWidth: 1,
+    borderColor: '#222',
+    paddingTop: 8
   }
 });
 
 export function PlanPDF({ data }: { data: any }) {
   // Unterstützung für verschiedene Key-Namen der KI
   const weeksArray = data?.trainingPlan || data?.trainingsplan || data?.weeks || data?.plan;
+
+  // Hilfsfunktion: KM aus Detail-Text extrahieren (robuster)
+  const extractKmFromText = (text: any): number => {
+    if (!text) return 0;
+    const s = String(text).toLowerCase();
+    // Match patterns like "10km", "10 km", "10k"
+    const patterns = [
+      /(\d+(?:\.\d+)?)\s*km/i,
+      /(\d+(?:\.\d+)?)\s*k\b/i,
+      /(\d+(?:\.\d+)?)\s*kilometer/i
+    ];
+    for (const p of patterns) {
+      const m = s.match(p);
+      if (m && m[1]) return parseFloat(m[1]);
+    }
+    return 0;
+  };
+
+  // Wöchentliche KM berechnen aus Tageseinheiten
+  const calculateWeeklyKm = (week: any): number => {
+    if (!week?.days || !Array.isArray(week.days)) return 0;
+    let total = 0;
+    for (const day of week.days) {
+      if (day.activity && /laufen|run/i.test(String(day.activity))) {
+        let km = 0;
+        if (day.distance) km = parseFloat(String(day.distance).replace(/[^0-9.]/g, '')) || 0;
+        if (!km && day.detail) km = extractKmFromText(day.detail);
+        total += km;
+      }
+    }
+    return Math.round(total * 10) / 10;
+  };
+
+  // Wöchentliche KM ermitteln (API-Wert oder berechnet)
+  const getWeeklyKm = (week: any): string => {
+    const apiValue = week.weeklyKm || week.weekly_km || week.weeklyKilometers;
+    if (apiValue && apiValue !== '-') return String(apiValue);
+    const calculated = calculateWeeklyKm(week);
+    if (calculated > 0) return String(calculated);
+    return data.targetWeeklyKm || '-';
+  };
 
   const parseTimeToSeconds = (t: any) => {
     if (!t) return null;
@@ -138,9 +179,9 @@ export function PlanPDF({ data }: { data: any }) {
   const formatPace = (p: any) => {
     if (!p) return '--:--';
     if (typeof p === 'string') return p;
-    if (p.m !== undefined || p.s !== undefined) return `${String(p.m||'0').padStart(2,'0')}:${String(p.s||'0').padStart(2,'0')}`;
-    if (p.min !== undefined || p.sec !== undefined) return `${String(p.min||'0').padStart(2,'0')}:${String(p.sec||'0').padStart(2,'0')}`;
-    if (p.minutes !== undefined || p.seconds !== undefined) return `${String(p.minutes||'0').padStart(2,'0')}:${String(p.seconds||'0').padStart(2,'0')}`;
+    if (p.m !== undefined || p.s !== undefined) return `${String(p.m || '0').padStart(2, '0')}:${String(p.s || '0').padStart(2, '0')}`;
+    if (p.min !== undefined || p.sec !== undefined) return `${String(p.min || '0').padStart(2, '0')}:${String(p.sec || '0').padStart(2, '0')}`;
+    if (p.minutes !== undefined || p.seconds !== undefined) return `${String(p.minutes || '0').padStart(2, '0')}:${String(p.seconds || '0').padStart(2, '0')}`;
     return '--:--';
   };
 
@@ -158,7 +199,7 @@ export function PlanPDF({ data }: { data: any }) {
     <Document title="PacePilot Trainingsplan">
       {weeksArray.map((week: any, i: number) => (
         <Page key={i} size="A4" style={styles.page}>
-          
+
           {/* DEBUG INFO (Tokens) - Nur auf der ersten Seite */}
           {i === 0 && data.debug && (
             <View style={styles.debugBox}>
@@ -173,14 +214,14 @@ export function PlanPDF({ data }: { data: any }) {
               <>
                 <Text style={styles.subtitle}>Ziel Distanz: {data.target || data.distance || '-'}</Text>
                 <Text style={styles.subtitle}>Ziel Zeit: {data.targetTime || data.targetTimeFormatted || '--:--:--'}</Text>
-                <Text style={styles.subtitle}>Ziel Pace: {data.targetPace || computePace(data) || '--:--' } min/km</Text>
+                <Text style={styles.subtitle}>Ziel Pace: {data.targetPace || computePace(data) || '--:--'} min/km</Text>
               </>
             ) : (
               <Text style={styles.subtitle}>{data.target || data.distance || ''}</Text>
             )}
           </View>
 
-              <Text style={styles.weekTitle}>Trainingswoche {week.weekNumber || i + 1} — Wochenkilometer: {week.weeklyKm || week.weekly_km || week.weekly_km_per_week || data.targetWeeklyKm || data.target_weekly_km || data.target_weeklyKm || '-'}</Text>
+          <Text style={styles.weekTitle}>Trainingswoche {week.weekNumber || i + 1} — Wochenkilometer: {getWeeklyKm(week)} km</Text>
 
           {/* Tabellen-Kopf */}
           <View style={styles.tableHeader}>

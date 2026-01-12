@@ -10,6 +10,7 @@ export default function PacePilot() {
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState<any>(null);
   const [isClient, setIsClient] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     // Schritt 1: Vision
@@ -17,7 +18,7 @@ export default function PacePilot() {
     goalType: "finish",
     hasRunBefore: "Nein",
     targetTime: { h: "00", m: "50", s: "00" },
-    
+
     // Schritt 2: Status & Rekorde
     pr5k: { h: "", m: "", s: "" },
     pr10k: { h: "", m: "", s: "" },
@@ -29,12 +30,12 @@ export default function PacePilot() {
     zone2Pace: { m: "06", s: "00" },
     zone2Type: 'hr', // 'hr' or 'rpe'
     zone2Value: '70', // percent or RPE value
-    
+
     // Schritt 3: Biometrie
     useHeartRate: true,
     maxHR: "185",
     restHR: "60",
-    
+
     // Schritt 4: Logistik & Volumen
     daysPerWeek: 3,
     targetWeeklyKm: "35",
@@ -47,7 +48,7 @@ export default function PacePilot() {
     includeStrength: true,
     includeStretching: true,
     equipment: "Keines", // Gym, Gewichte Zuhause, Keines
-    
+
     // Schritt 6: Finale
     notes: ""
   });
@@ -165,7 +166,7 @@ export default function PacePilot() {
     }
     const today = new Date();
     const eventD = new Date(val + 'T00:00:00');
-    const diffMs = eventD.getTime() - today.setHours(0,0,0,0);
+    const diffMs = eventD.getTime() - today.setHours(0, 0, 0, 0);
     const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
     const weeks = diffDays > 0 ? Math.ceil(diffDays / 7) : 0;
     setComputedWeeks(weeks);
@@ -216,7 +217,7 @@ export default function PacePilot() {
   return (
     <div className="min-h-screen bg-[#050505] text-white p-6 font-sans antialiased">
       <div className="max-w-xl mx-auto py-10">
-        
+
         {/* Header Navigation */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -257,16 +258,16 @@ export default function PacePilot() {
           <div className="space-y-8 animate-in slide-in-from-bottom-4">
             <h2 className="text-3xl font-black uppercase italic text-orange-600">1. Das Ziel</h2>
             <div className="space-y-6">
-              <select className="w-full bg-zinc-900 p-5 rounded-2xl border border-zinc-800 font-bold" value={form.distance} onChange={(e) => setForm({...form, distance: e.target.value})}>
+              <select className="w-full bg-zinc-900 p-5 rounded-2xl border border-zinc-800 font-bold" value={form.distance} onChange={(e) => setForm({ ...form, distance: e.target.value })}>
                 <option value="5km">5km</option><option value="10km">10km</option><option value="Halbmarathon">Halbmarathon</option><option value="Marathon">Marathon</option>
               </select>
               <div className="flex gap-4">
-                <button onClick={() => setForm({...form, goalType: 'finish'})} className={`flex-1 p-4 rounded-xl font-bold border-2 ${form.goalType === 'finish' ? 'border-orange-600 bg-orange-600/10' : 'border-zinc-900'}`}>Finish</button>
-                <button onClick={() => setForm({...form, goalType: 'time'})} className={`flex-1 p-4 rounded-xl font-bold border-2 ${form.goalType === 'time' ? 'border-orange-600 bg-orange-600/10' : 'border-zinc-900'}`}>Zeit</button>
+                <button onClick={() => setForm({ ...form, goalType: 'finish' })} className={`flex-1 p-4 rounded-xl font-bold border-2 ${form.goalType === 'finish' ? 'border-orange-600 bg-orange-600/10' : 'border-zinc-900'}`}>Finish</button>
+                <button onClick={() => setForm({ ...form, goalType: 'time' })} className={`flex-1 p-4 rounded-xl font-bold border-2 ${form.goalType === 'time' ? 'border-orange-600 bg-orange-600/10' : 'border-zinc-900'}`}>Zeit</button>
               </div>
               <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800 flex justify-between items-center">
                 <span className="text-sm font-bold">Distanz schon mal gelaufen?</span>
-                <button onClick={() => setForm({...form, hasRunBefore: form.hasRunBefore === "Ja" ? "Nein" : "Ja"})} className={`px-4 py-2 rounded-lg font-bold ${form.hasRunBefore === "Ja" ? "bg-orange-600" : "bg-zinc-800"}`}>{form.hasRunBefore}</button>
+                <button onClick={() => setForm({ ...form, hasRunBefore: form.hasRunBefore === "Ja" ? "Nein" : "Ja" })} className={`px-4 py-2 rounded-lg font-bold ${form.hasRunBefore === "Ja" ? "bg-orange-600" : "bg-zinc-800"}`}>{form.hasRunBefore}</button>
               </div>
               {form.goalType === 'time' && (
                 <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800 flex items-center gap-3">
@@ -281,7 +282,7 @@ export default function PacePilot() {
                 </div>
               )}
             </div>
-            <button onClick={() => setStep(2)} className="w-full bg-white text-black py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-2">Leistungsstand <ChevronRight/></button>
+            <button onClick={() => setStep(2)} className="w-full bg-white text-black py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-2">Leistungsstand <ChevronRight /></button>
           </div>
         )}
 
@@ -293,21 +294,21 @@ export default function PacePilot() {
               <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase mb-2 block">PB 5km</label>
                 <div className="flex justify-center items-center gap-2">
-                  <input type="text" inputMode="numeric" placeholder="hh" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.pr5k.h} onKeyDown={makePRKeyHandler('pr5k','h',99)} onPaste={makePRPasteHandler('pr5k','h',99)} />
+                  <input type="text" inputMode="numeric" placeholder="hh" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.pr5k.h} onKeyDown={makePRKeyHandler('pr5k', 'h', 99)} onPaste={makePRPasteHandler('pr5k', 'h', 99)} />
                   <span className="text-zinc-500">:</span>
-                  <input type="text" inputMode="numeric" placeholder="mm" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.pr5k.m} onKeyDown={makePRKeyHandler('pr5k','m',59)} onPaste={makePRPasteHandler('pr5k','m',59)} />
+                  <input type="text" inputMode="numeric" placeholder="mm" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.pr5k.m} onKeyDown={makePRKeyHandler('pr5k', 'm', 59)} onPaste={makePRPasteHandler('pr5k', 'm', 59)} />
                   <span className="text-zinc-500">:</span>
-                  <input type="text" inputMode="numeric" placeholder="ss" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.pr5k.s} onKeyDown={makePRKeyHandler('pr5k','s',59)} onPaste={makePRPasteHandler('pr5k','s',59)} />
+                  <input type="text" inputMode="numeric" placeholder="ss" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.pr5k.s} onKeyDown={makePRKeyHandler('pr5k', 's', 59)} onPaste={makePRPasteHandler('pr5k', 's', 59)} />
                 </div>
               </div>
               <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase mb-2 block">PB 10km</label>
                 <div className="flex justify-center items-center gap-2">
-                  <input type="text" inputMode="numeric" placeholder="hh" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.pr10k.h} onKeyDown={makePRKeyHandler('pr10k','h',99)} onPaste={makePRPasteHandler('pr10k','h',99)} />
+                  <input type="text" inputMode="numeric" placeholder="hh" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.pr10k.h} onKeyDown={makePRKeyHandler('pr10k', 'h', 99)} onPaste={makePRPasteHandler('pr10k', 'h', 99)} />
                   <span className="text-zinc-500">:</span>
-                  <input type="text" inputMode="numeric" placeholder="mm" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.pr10k.m} onKeyDown={makePRKeyHandler('pr10k','m',59)} onPaste={makePRPasteHandler('pr10k','m',59)} />
+                  <input type="text" inputMode="numeric" placeholder="mm" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.pr10k.m} onKeyDown={makePRKeyHandler('pr10k', 'm', 59)} onPaste={makePRPasteHandler('pr10k', 'm', 59)} />
                   <span className="text-zinc-500">:</span>
-                  <input type="text" inputMode="numeric" placeholder="ss" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.pr10k.s} onKeyDown={makePRKeyHandler('pr10k','s',59)} onPaste={makePRPasteHandler('pr10k','s',59)} />
+                  <input type="text" inputMode="numeric" placeholder="ss" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.pr10k.s} onKeyDown={makePRKeyHandler('pr10k', 's', 59)} onPaste={makePRPasteHandler('pr10k', 's', 59)} />
                 </div>
               </div>
             </div>
@@ -315,41 +316,41 @@ export default function PacePilot() {
               <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase mb-2 block">PB Halbmarathon</label>
                 <div className="flex justify-center items-center gap-2">
-                  <input type="text" inputMode="numeric" placeholder="hh" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.prHalf.h} onKeyDown={makePRKeyHandler('prHalf','h',99)} onPaste={makePRPasteHandler('prHalf','h',99)} />
+                  <input type="text" inputMode="numeric" placeholder="hh" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.prHalf.h} onKeyDown={makePRKeyHandler('prHalf', 'h', 99)} onPaste={makePRPasteHandler('prHalf', 'h', 99)} />
                   <span className="text-zinc-500">:</span>
-                  <input type="text" inputMode="numeric" placeholder="mm" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.prHalf.m} onKeyDown={makePRKeyHandler('prHalf','m',59)} onPaste={makePRPasteHandler('prHalf','m',59)} />
+                  <input type="text" inputMode="numeric" placeholder="mm" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.prHalf.m} onKeyDown={makePRKeyHandler('prHalf', 'm', 59)} onPaste={makePRPasteHandler('prHalf', 'm', 59)} />
                   <span className="text-zinc-500">:</span>
-                  <input type="text" inputMode="numeric" placeholder="ss" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.prHalf.s} onKeyDown={makePRKeyHandler('prHalf','s',59)} onPaste={makePRPasteHandler('prHalf','s',59)} />
+                  <input type="text" inputMode="numeric" placeholder="ss" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.prHalf.s} onKeyDown={makePRKeyHandler('prHalf', 's', 59)} onPaste={makePRPasteHandler('prHalf', 's', 59)} />
                 </div>
               </div>
               <div className="bg-zinc-900 p-4 rounded-xl border border-zinc-800">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase mb-2 block">PB Marathon</label>
                 <div className="flex justify-center items-center gap-2">
-                  <input type="text" inputMode="numeric" placeholder="hh" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.prMarathon.h} onKeyDown={makePRKeyHandler('prMarathon','h',99)} onPaste={makePRPasteHandler('prMarathon','h',99)} />
+                  <input type="text" inputMode="numeric" placeholder="hh" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.prMarathon.h} onKeyDown={makePRKeyHandler('prMarathon', 'h', 99)} onPaste={makePRPasteHandler('prMarathon', 'h', 99)} />
                   <span className="text-zinc-500">:</span>
-                  <input type="text" inputMode="numeric" placeholder="mm" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.prMarathon.m} onKeyDown={makePRKeyHandler('prMarathon','m',59)} onPaste={makePRPasteHandler('prMarathon','m',59)} />
+                  <input type="text" inputMode="numeric" placeholder="mm" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.prMarathon.m} onKeyDown={makePRKeyHandler('prMarathon', 'm', 59)} onPaste={makePRPasteHandler('prMarathon', 'm', 59)} />
                   <span className="text-zinc-500">:</span>
-                  <input type="text" inputMode="numeric" placeholder="ss" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.prMarathon.s} onKeyDown={makePRKeyHandler('prMarathon','s',59)} onPaste={makePRPasteHandler('prMarathon','s',59)} />
+                  <input type="text" inputMode="numeric" placeholder="ss" className="w-14 bg-black p-2 rounded text-center font-bold" value={form.prMarathon.s} onKeyDown={makePRKeyHandler('prMarathon', 's', 59)} onPaste={makePRPasteHandler('prMarathon', 's', 59)} />
                 </div>
               </div>
             </div>
             <div className="space-y-4">
               <label className="block text-xs font-bold text-zinc-500 uppercase">Aktuelles Wochen-Pensum (km)</label>
-              <input type="number" className="w-full bg-zinc-900 p-5 rounded-2xl border border-zinc-800 font-bold" value={form.currentWeeklyVolume} onChange={(e) => setForm({...form, currentWeeklyVolume: e.target.value})} />
+              <input type="number" className="w-full bg-zinc-900 p-5 rounded-2xl border border-zinc-800 font-bold" value={form.currentWeeklyVolume} onChange={(e) => setForm({ ...form, currentWeeklyVolume: e.target.value })} />
             </div>
             <div className="space-y-4">
               <label className="block text-xs font-bold text-zinc-500 uppercase">Zone-2 Pace (aktuell)</label>
               <div className="flex items-center gap-2">
-                <input type="number" min={0} max={99} className="w-20 bg-black p-2 rounded text-center font-bold" value={form.zone2Pace.m} onChange={(e) => setForm({...form, zone2Pace: {...form.zone2Pace, m: e.target.value}})} />
+                <input type="number" min={0} max={99} className="w-20 bg-black p-2 rounded text-center font-bold" value={form.zone2Pace.m} onChange={(e) => setForm({ ...form, zone2Pace: { ...form.zone2Pace, m: e.target.value } })} />
                 <span className="text-zinc-500">:</span>
-                <input type="number" min={0} max={59} className="w-20 bg-black p-2 rounded text-center font-bold" value={form.zone2Pace.s} onChange={(e) => setForm({...form, zone2Pace: {...form.zone2Pace, s: e.target.value}})} />
+                <input type="number" min={0} max={59} className="w-20 bg-black p-2 rounded text-center font-bold" value={form.zone2Pace.s} onChange={(e) => setForm({ ...form, zone2Pace: { ...form.zone2Pace, s: e.target.value } })} />
                 <div className="ml-4 flex items-center gap-2">
                   <select className="bg-zinc-900 p-2 rounded" value={form.zone2Type} onChange={(e) => {
                     const v = e.target.value;
                     if (v === 'hr') {
-                      setForm({...form, zone2Type: 'hr', zone2Value: '70'});
+                      setForm({ ...form, zone2Type: 'hr', zone2Value: '70' });
                     } else {
-                      setForm({...form, zone2Type: 'rpe', zone2Value: '6'});
+                      setForm({ ...form, zone2Type: 'rpe', zone2Value: '6' });
                     }
                   }}>
                     <option value="hr">HF %</option>
@@ -365,7 +366,7 @@ export default function PacePilot() {
                       if (isNaN(n)) n = 0;
                       if (n < 1) n = 1;
                       if (n > 10) n = 10;
-                      setForm({...form, zone2Value: String(n)});
+                      setForm({ ...form, zone2Value: String(n) });
                     }} />
                   )}
                 </div>
@@ -373,8 +374,8 @@ export default function PacePilot() {
               <div className="text-[10px] text-zinc-500 italic">z. B. Pace bei 70% HF oder Anstrengung 6/10</div>
             </div>
             <div className="flex gap-4">
-              <button onClick={() => setStep(1)} className="p-5 bg-zinc-900 rounded-2xl border border-zinc-800"><ChevronLeft/></button>
-              <button onClick={() => setStep(3)} className="flex-1 bg-white text-black py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-2">Biometrie <ChevronRight/></button>
+              <button onClick={() => setStep(1)} className="p-5 bg-zinc-900 rounded-2xl border border-zinc-800"><ChevronLeft /></button>
+              <button onClick={() => setStep(3)} className="flex-1 bg-white text-black py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-2">Biometrie <ChevronRight /></button>
             </div>
           </div>
         )}
@@ -386,7 +387,7 @@ export default function PacePilot() {
             <div className="bg-zinc-900 p-6 rounded-3xl border border-zinc-800 space-y-6">
               <div className="flex justify-between items-center">
                 <span className="font-bold">Pulsuhr vorhanden?</span>
-                <button onClick={() => setForm({...form, useHeartRate: !form.useHeartRate})} className={`w-14 h-8 rounded-full relative transition-colors ${form.useHeartRate ? 'bg-orange-600' : 'bg-zinc-700'}`}>
+                <button onClick={() => setForm({ ...form, useHeartRate: !form.useHeartRate })} className={`w-14 h-8 rounded-full relative transition-colors ${form.useHeartRate ? 'bg-orange-600' : 'bg-zinc-700'}`}>
                   <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all ${form.useHeartRate ? 'left-7' : 'left-1'}`} />
                 </button>
               </div>
@@ -394,18 +395,18 @@ export default function PacePilot() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[10px] font-bold text-zinc-500 uppercase mb-2 block">Max HR</label>
-                    <input type="number" placeholder="Max HR" className="bg-black p-4 rounded-xl text-center font-bold" value={form.maxHR} onChange={(e) => setForm({...form, maxHR: e.target.value})} />
+                    <input type="number" placeholder="Max HR" className="bg-black p-4 rounded-xl text-center font-bold" value={form.maxHR} onChange={(e) => setForm({ ...form, maxHR: e.target.value })} />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-zinc-500 uppercase mb-2 block">Ruhepuls</label>
-                    <input type="number" placeholder="Ruhepuls" className="bg-black p-4 rounded-xl text-center font-bold" value={form.restHR} onChange={(e) => setForm({...form, restHR: e.target.value})} />
+                    <input type="number" placeholder="Ruhepuls" className="bg-black p-4 rounded-xl text-center font-bold" value={form.restHR} onChange={(e) => setForm({ ...form, restHR: e.target.value })} />
                   </div>
                 </div>
               )}
             </div>
             <div className="flex gap-4">
-              <button onClick={() => setStep(2)} className="p-5 bg-zinc-900 rounded-2xl border border-zinc-800"><ChevronLeft/></button>
-              <button onClick={() => setStep(4)} className="flex-1 bg-white text-black py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-2">Logistik <ChevronRight/></button>
+              <button onClick={() => setStep(2)} className="p-5 bg-zinc-900 rounded-2xl border border-zinc-800"><ChevronLeft /></button>
+              <button onClick={() => setStep(4)} className="flex-1 bg-white text-black py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-2">Logistik <ChevronRight /></button>
             </div>
           </div>
         )}
@@ -418,7 +419,7 @@ export default function PacePilot() {
               <div>
                 <label className="block text-xs font-bold text-zinc-500 uppercase mb-3">Geplante Wochen-KM (Ziel)</label>
                 <div className="flex items-center gap-4">
-                  <input type="range" min="10" max="120" step="5" className="flex-1 accent-orange-600" value={form.targetWeeklyKm} onChange={(e) => setForm({...form, targetWeeklyKm: e.target.value})} />
+                  <input type="range" min="10" max="120" step="5" className="flex-1 accent-orange-600" value={form.targetWeeklyKm} onChange={(e) => setForm({ ...form, targetWeeklyKm: e.target.value })} />
                   <span className="text-2xl font-black text-orange-600 w-16">{form.targetWeeklyKm}</span>
                 </div>
                 <p className="text-[10px] text-zinc-500 mt-2 italic">Empfehlung: {getCoachAdvice()?.km} km</p>
@@ -428,15 +429,15 @@ export default function PacePilot() {
                   <label className="text-[10px] font-bold text-zinc-500 uppercase mb-2 block">Trainingstage pro Woche</label>
                   <div className="flex gap-2">
                     {[3, 4, 5, 6].map(n => (
-                      <button key={n} onClick={() => setForm({...form, daysPerWeek: n})} className={`flex-1 py-4 rounded-xl font-bold ${form.daysPerWeek === n ? 'bg-orange-600' : 'bg-zinc-900 text-zinc-500'}`}>{n} Tage</button>
+                      <button key={n} onClick={() => setForm({ ...form, daysPerWeek: n })} className={`flex-1 py-4 rounded-xl font-bold ${form.daysPerWeek === n ? 'bg-orange-600' : 'bg-zinc-900 text-zinc-500'}`}>{n} Tage</button>
                     ))}
                   </div>
                 </div>
               </div>
             </div>
             <div className="flex gap-4">
-              <button onClick={() => setStep(3)} className="p-5 bg-zinc-900 rounded-2xl border border-zinc-800"><ChevronLeft/></button>
-              <button onClick={() => setStep(5)} className="flex-1 bg-white text-black py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-2">Equipment <ChevronRight/></button>
+              <button onClick={() => setStep(3)} className="p-5 bg-zinc-900 rounded-2xl border border-zinc-800"><ChevronLeft /></button>
+              <button onClick={() => setStep(5)} className="flex-1 bg-white text-black py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-2">Equipment <ChevronRight /></button>
             </div>
           </div>
         )}
@@ -445,14 +446,24 @@ export default function PacePilot() {
         {step === 5 && (
           <div className="space-y-8 animate-in slide-in-from-right-4">
             <h2 className="text-3xl font-black uppercase italic text-orange-600">5. Training</h2>
+
+            {/* Coach Advice for Step 5 */}
+            {getCoachAdvice() && (
+              <div className="p-4 bg-orange-600/10 border-l-4 border-orange-600 rounded-r-xl">
+                <div className="flex items-center gap-2 mb-2 text-orange-600 font-black uppercase text-[10px] tracking-widest">
+                  <Zap size={14} /> Coach Tipp
+                </div>
+                <p className="text-xs text-zinc-400 italic">{getCoachAdvice()?.tip}</p>
+              </div>
+            )}
             <div className="space-y-4">
               <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-bold">Krafttraining einbauen?</span>
-                  <input type="checkbox" checked={form.includeStrength} onChange={(e) => setForm({...form, includeStrength: e.target.checked})} className="w-5 h-5 accent-orange-600" />
+                  <input type="checkbox" checked={form.includeStrength} onChange={(e) => setForm({ ...form, includeStrength: e.target.checked })} className="w-5 h-5 accent-orange-600" />
                 </div>
                 {form.includeStrength && (
-                  <select className="w-full bg-black p-3 rounded-xl text-sm font-bold border border-zinc-800" value={form.equipment} onChange={(e) => setForm({...form, equipment: e.target.value})}>
+                  <select className="w-full bg-black p-3 rounded-xl text-sm font-bold border border-zinc-800" value={form.equipment} onChange={(e) => setForm({ ...form, equipment: e.target.value })}>
                     <option value="Keines">Kein Equipment (Bodyweight)</option>
                     <option value="Gewichte">Gewichte Zuhause</option>
                     <option value="Gym">Fitnessstudio / Gym</option>
@@ -461,12 +472,12 @@ export default function PacePilot() {
               </div>
               <div className="bg-zinc-900 p-5 rounded-2xl border border-zinc-800 flex justify-between items-center">
                 <span className="text-sm font-bold">Mobility & Dehnen (täglich)?</span>
-                <input type="checkbox" checked={form.includeStretching} onChange={(e) => setForm({...form, includeStretching: e.target.checked})} className="w-5 h-5 accent-orange-600" />
+                <input type="checkbox" checked={form.includeStretching} onChange={(e) => setForm({ ...form, includeStretching: e.target.checked })} className="w-5 h-5 accent-orange-600" />
               </div>
             </div>
             <div className="flex gap-4">
-              <button onClick={() => setStep(4)} className="p-5 bg-zinc-900 rounded-2xl border border-zinc-800"><ChevronLeft/></button>
-              <button onClick={() => setStep(6)} className="flex-1 bg-white text-black py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-2">Finale <ChevronRight/></button>
+              <button onClick={() => setStep(4)} className="p-5 bg-zinc-900 rounded-2xl border border-zinc-800"><ChevronLeft /></button>
+              <button onClick={() => setStep(6)} className="flex-1 bg-white text-black py-5 rounded-2xl font-black uppercase italic flex justify-center items-center gap-2">Finale <ChevronRight /></button>
             </div>
           </div>
         )}
@@ -475,43 +486,87 @@ export default function PacePilot() {
         {step === 6 && (
           <div className="space-y-8 animate-in slide-in-from-right-4">
             <h2 className="text-3xl font-black uppercase italic text-orange-600">6. Trainingsdauer</h2>
+
+            {/* Coach Advice for Step 6 */}
+            {getCoachAdvice() && (
+              <div className="p-4 bg-orange-600/10 border-l-4 border-orange-600 rounded-r-xl">
+                <div className="flex items-center gap-2 mb-2 text-orange-600 font-black uppercase text-[10px] tracking-widest">
+                  <Zap size={14} /> Coach Empfehlung
+                </div>
+                <div className="grid grid-cols-2 gap-3 mb-2">
+                  <div className="bg-zinc-900 p-2 rounded-xl">
+                    <div className="text-[10px] font-bold text-zinc-500 uppercase">Wochen</div>
+                    <div className="text-sm font-black text-orange-600">{getCoachAdvice()?.weeks}</div>
+                  </div>
+                  <div className="bg-zinc-900 p-2 rounded-xl">
+                    <div className="text-[10px] font-bold text-zinc-500 uppercase">Tage/Woche</div>
+                    <div className="text-sm font-black text-orange-600">{getCoachAdvice()?.days}</div>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="space-y-6">
-               <div className="flex gap-4">
-                  <button onClick={() => setForm({...form, planType: 'weeks'})} className={`flex-1 p-4 rounded-xl border-2 font-bold ${form.planType === 'weeks' ? 'border-orange-600 bg-orange-600/5' : 'border-zinc-800'}`}>Wochen</button>
-                  <button onClick={() => setForm({...form, planType: 'event'})} className={`flex-1 p-4 rounded-xl border-2 font-bold ${form.planType === 'event' ? 'border-orange-600 bg-orange-600/5' : 'border-zinc-800'}`}>Event</button>
-               </div>
-               {form.planType === 'weeks' && (
-                 <div className="space-y-4">
-                   <div className="flex gap-2">
-                     {(weekPresets[form.distance] || []).map(w => (
-                       <button key={w} onClick={() => setForm({...form, planWeeks: String(w)})} className={`px-4 py-2 rounded-xl font-bold ${String(form.planWeeks) === String(w) ? 'bg-orange-600' : 'bg-zinc-900 text-zinc-500'}`}>{w} Wochen</button>
-                     ))}
-                   </div>
-                   <input type="number" placeholder="Wochen (Empfehlung)" className="w-full bg-zinc-900 p-5 rounded-2xl border border-zinc-800 font-bold" value={form.planWeeks} onChange={(e) => setForm({...form, planWeeks: e.target.value})} />
-                 </div>
-               )}
-               {form.planType === 'event' && (
-                 <div className="space-y-3">
-                   <label className="text-[10px] font-bold text-zinc-500 uppercase">Event-Datum</label>
-                   <input type="date" className="w-full bg-zinc-900 p-3 rounded-xl border border-zinc-800 font-bold" value={form.eventDate} onChange={handleEventDateChange} />
-                   <div className="flex items-center gap-4">
-                     <div className="text-[10px] text-zinc-400">Berechnete Wochen bis Event:</div>
-                     <div className="text-xl font-black text-orange-600">{computedWeeks ?? '-'}</div>
-                   </div>
-                   {computedWeeks !== null && (() => {
-                     const min = minWeeksMap[form.distance] || 0;
-                     if (computedWeeks < min) {
-                       return <div className="text-xs text-yellow-400">Warnung: Nur {computedWeeks} Wochen bis zum Event (empfohlen mindestens {min}). Du kannst trotzdem fortfahren.</div>;
-                     }
-                     return null;
-                   })()}
-                 </div>
-               )}
-               <textarea className="w-full bg-zinc-900 p-5 rounded-2xl border border-zinc-800 h-32" placeholder="Besonderheiten (Verletzungen, Vorlieben...)" value={form.notes} onChange={(e) => setForm({...form, notes: e.target.value})} />
-            </div>
               <div className="flex gap-4">
-              <button onClick={() => setStep(5)} className="p-5 bg-zinc-900 rounded-2xl border border-zinc-800"><ChevronLeft/></button>
-              <button onClick={() => setStep(7)} disabled={loading} className="flex-1 bg-orange-600 text-black py-6 rounded-3xl font-black text-xl uppercase italic shadow-[0_0_30px_rgba(234,88,12,0.3)]">
+                <button onClick={() => setForm({ ...form, planType: 'weeks' })} className={`flex-1 p-4 rounded-xl border-2 font-bold ${form.planType === 'weeks' ? 'border-orange-600 bg-orange-600/5' : 'border-zinc-800'}`}>Wochen</button>
+                <button onClick={() => setForm({ ...form, planType: 'event' })} className={`flex-1 p-4 rounded-xl border-2 font-bold ${form.planType === 'event' ? 'border-orange-600 bg-orange-600/5' : 'border-zinc-800'}`}>Event</button>
+              </div>
+              {form.planType === 'weeks' && (
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    {(weekPresets[form.distance] || []).map(w => (
+                      <button key={w} onClick={() => { setForm({ ...form, planWeeks: String(w) }); setValidationError(null); }} className={`px-4 py-2 rounded-xl font-bold ${String(form.planWeeks) === String(w) ? 'bg-orange-600' : 'bg-zinc-900 text-zinc-500'}`}>{w} Wochen</button>
+                    ))}
+                  </div>
+                  <input type="number" placeholder="Wochen (Empfehlung)" className="w-full bg-zinc-900 p-5 rounded-2xl border border-zinc-800 font-bold" value={form.planWeeks} onChange={(e) => { setForm({ ...form, planWeeks: e.target.value }); setValidationError(null); }} />
+                  {/* Marathon-Mindestwochen-Warnung */}
+                  {form.distance === 'Marathon' && parseInt(form.planWeeks) < 12 && parseInt(form.planWeeks) > 0 && (
+                    <div className="p-3 bg-red-600/10 border border-red-600/30 rounded-xl text-red-400 text-sm font-bold flex items-center gap-2">
+                      <AlertTriangle size={16} /> Marathon erfordert mindestens 12 Wochen Vorbereitung.
+                    </div>
+                  )}
+                </div>
+              )}
+              {form.planType === 'event' && (
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase">Event-Datum</label>
+                  <input type="date" className="w-full bg-zinc-900 p-3 rounded-xl border border-zinc-800 font-bold" value={form.eventDate} onChange={handleEventDateChange} />
+                  <div className="flex items-center gap-4">
+                    <div className="text-[10px] text-zinc-400">Berechnete Wochen bis Event:</div>
+                    <div className="text-xl font-black text-orange-600">{computedWeeks ?? '-'}</div>
+                  </div>
+                  {computedWeeks !== null && (() => {
+                    const min = minWeeksMap[form.distance] || 0;
+                    if (computedWeeks < min) {
+                      return <div className="text-xs text-yellow-400">Warnung: Nur {computedWeeks} Wochen bis zum Event (empfohlen mindestens {min}). Du kannst trotzdem fortfahren.</div>;
+                    }
+                    return null;
+                  })()}
+                </div>
+              )}
+              <textarea className="w-full bg-zinc-900 p-5 rounded-2xl border border-zinc-800 h-32" placeholder="Besonderheiten (Verletzungen, Vorlieben...)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+            </div>
+            {validationError && (
+              <div className="p-4 bg-red-600/10 border border-red-600/30 rounded-xl text-red-400 text-sm font-bold flex items-center gap-2">
+                <AlertTriangle size={18} /> {validationError}
+              </div>
+            )}
+            <div className="flex gap-4">
+              <button onClick={() => setStep(5)} className="p-5 bg-zinc-900 rounded-2xl border border-zinc-800"><ChevronLeft /></button>
+              <button onClick={() => {
+                // Hard Constraint: Marathon mindestens 12 Wochen
+                const weeks = parseInt(form.planWeeks);
+                const minWeeks = minWeeksMap[form.distance] || 0;
+                if (form.distance === 'Marathon' && weeks < 12) {
+                  setValidationError('Marathon erfordert mindestens 12 Wochen Vorbereitung. Bitte passe die Dauer an.');
+                  return;
+                }
+                if (weeks < minWeeks) {
+                  setValidationError(`Für ${form.distance} werden mindestens ${minWeeks} Wochen empfohlen.`);
+                  return;
+                }
+                setValidationError(null);
+                setStep(7);
+              }} disabled={loading || (form.distance === 'Marathon' && parseInt(form.planWeeks) < 12)} className={`flex-1 py-6 rounded-3xl font-black text-xl uppercase italic shadow-[0_0_30px_rgba(234,88,12,0.3)] ${form.distance === 'Marathon' && parseInt(form.planWeeks) < 12 ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed' : 'bg-orange-600 text-black'}`}>
                 {loading ? <Loader2 className="animate-spin mx-auto" /> : "ZUSAMMENFASSUNG"}
               </button>
             </div>
@@ -530,7 +585,6 @@ export default function PacePilot() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="text-zinc-400 text-sm">Aktuelles Wochen-Pensum (km)</div><div className="font-black">{form.currentWeeklyVolume}</div>
-                  <div className="text-zinc-400 text-sm">Aktuelles Wochen-Pensum (km)</div><div className="font-black">{form.currentWeeklyVolume}</div>
                   {hasPR((form as any).pr5k) && <div className="text-zinc-400 text-sm">PB 5km</div>}
                   {hasPR((form as any).pr5k) && <div className="font-black">{formatPR((form as any).pr5k)}</div>}
                   {hasPR((form as any).pr10k) && <div className="text-zinc-400 text-sm">PB 10km</div>}
@@ -544,7 +598,7 @@ export default function PacePilot() {
                   {form.zone2Pace && (
                     <>
                       <div className="text-zinc-400 text-sm">Zone-2 Pace</div>
-                      <div className="font-black">{`${String(form.zone2Pace.m).padStart(2,'0')}:${String(form.zone2Pace.s).padStart(2,'0')} — bei ${form.zone2Type === 'hr' ? form.zone2Value + '%' : 'Anstrengung ' + form.zone2Value + '/10'}`}</div>
+                      <div className="font-black">{`${String(form.zone2Pace.m).padStart(2, '0')}:${String(form.zone2Pace.s).padStart(2, '0')} — bei ${form.zone2Type === 'hr' ? form.zone2Value + '%' : 'Anstrengung ' + form.zone2Value + '/10'}`}</div>
                     </>
                   )}
                 </div>
@@ -586,7 +640,7 @@ export default function PacePilot() {
                   {form.goalType === 'time' && (
                     <>
                       <div className="text-zinc-400 text-sm">Zielzeit</div>
-                      <div className="font-black">{`${String(form.targetTime.h).padStart(2,'0')}:${String(form.targetTime.m).padStart(2,'0')}:${String(form.targetTime.s).padStart(2,'0')}`}</div>
+                      <div className="font-black">{`${String(form.targetTime.h).padStart(2, '0')}:${String(form.targetTime.m).padStart(2, '0')}:${String(form.targetTime.s).padStart(2, '0')}`}</div>
                     </>
                   )}
                   <div className="text-zinc-400 text-sm">Notizen</div><div className="font-black">{form.notes || '-'}</div>
@@ -594,7 +648,7 @@ export default function PacePilot() {
               </div>
             </div>
             <div className="flex gap-4">
-              <button onClick={() => setStep(6)} className="p-5 bg-zinc-900 rounded-2xl border border-zinc-800"><ChevronLeft/></button>
+              <button onClick={() => setStep(6)} className="p-5 bg-zinc-900 rounded-2xl border border-zinc-800"><ChevronLeft /></button>
               <button onClick={handleGenerate} disabled={loading} className="flex-1 bg-orange-600 text-black py-6 rounded-3xl font-black text-xl uppercase italic shadow-[0_0_30px_rgba(234,88,12,0.3)]">
                 {loading ? <Loader2 className="animate-spin mx-auto" /> : "PLAN GENERIEREN"}
               </button>
@@ -607,7 +661,7 @@ export default function PacePilot() {
           <div className="text-center space-y-10 animate-in zoom-in-95 duration-500">
             <div className="p-12 bg-zinc-900 border-2 border-orange-600/30 rounded-[3rem] shadow-2xl relative">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-orange-600 text-black px-6 py-1 rounded-full text-xs font-black uppercase shadow-lg">System Ready</div>
-              <h2 className="text-4xl font-black uppercase italic mb-8 italic text-orange-600 leading-tight">Plan erfolgreich <br/> erstellt</h2>
+              <h2 className="text-4xl font-black uppercase italic mb-8 italic text-orange-600 leading-tight">Plan erfolgreich <br /> erstellt</h2>
               <PDFDownloadLink document={<PlanPDF data={plan} />} fileName={`PacePilot_${form.distance}.pdf`} className="w-full bg-white text-black py-7 rounded-2xl font-black text-2xl flex justify-center items-center gap-4 shadow-xl hover:scale-[1.02] transition-transform">
                 {({ loading }) => loading ? "Lade..." : <><Download /> DOWNLOAD PDF</>}
               </PDFDownloadLink>

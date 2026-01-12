@@ -3,6 +3,110 @@ import { NextResponse } from "next/server";
 
 export const runtime = 'edge'; // Optimierung für Cloudflare
 
+// ==========================================
+// MODULAR PROMPT SYSTEM
+// ==========================================
+
+// Distanzspezifische System-Prompts
+const distancePrompts: Record<string, string> = {
+  '5km': `
+    DISTANZ-FOKUS 5KM:
+    - Schwerpunkt auf VO2max-Intervallen und schnellen Wiederholungen
+    - Typische Intervalle: 400m, 800m, 1km Repeats
+    - Tempo-Läufe im 5k-Renntempo
+    - Kurze, explosive Einheiten bevorzugen
+    - Maximale Longrun-Distanz: 12-15km
+    - Höhere Intensität, kürzere Erholung zwischen Intervallen`,
+
+  '10km': `
+    DISTANZ-FOKUS 10KM:
+    - Balance zwischen Ausdauer und Tempohärte
+    - Schwellenläufe (Tempo Runs) im Laktatbereich
+    - Intervalle: 800m-1600m Repeats
+    - Progressionsläufe (letztes Drittel schneller)
+    - Maximale Longrun-Distanz: 16-20km
+    - Wöchentlich 1x Tempo + 1x Longrun`,
+
+  'Halbmarathon': `
+    DISTANZ-FOKUS HALBMARATHON:
+    - Schwellentraining ist Kernstück der Vorbereitung
+    - Lange Tempodauerläufe (Tempo Runs 8-12km)
+    - Longrun-Progression bis 22-24km
+    - Marathon-Pace-Einheiten einbauen
+    - Letzte 2 Wochen: Tapering mit reduziertem Volumen
+    - Fokus auf muskuläre Ausdauer im Krafttraining`,
+
+  'Marathon': `
+    DISTANZ-FOKUS MARATHON:
+    - Periodisierung über 3-4 Blöcke: Aufbau → Spezifik → Wettkampf → Tapering
+    - Block 1 (Wochen 1-4): Grundlagenausdauer aufbauen, Longrun von 18-24km
+    - Block 2 (Wochen 5-8): Spezifisches Marathon-Tempo einführen, Longrun 26-32km
+    - Block 3 (Wochen 9-11): Peak-Wochen, längste Longruns (32-35km), Marathon-Pace-Segmente
+    - Block 4 (Wochen 12+): Tapering, Volumen um 40-60% reduzieren, Beine frisch halten
+    - Schwellenläufe weniger intensiv als bei kürzeren Distanzen
+    - TAPERING KRITISCH: Letzte 2-3 Wochen deutlich weniger km, keine Longuns >20km`
+};
+
+// Plyometrie-fokussiertes Krafttraining (skaliert nach Equipment und Umfang)
+const getStrengthPrompt = (equipment: string, distance: string, weeklyKm: number): string => {
+  if (!equipment) return '';
+
+  // Basis-Plyometrie-Übungen (alle Levels)
+  const plyoBasic = [
+    "Box Jumps (3x8)",
+    "Skipping (3x30 Sek.)",
+    "Sprungkniebeugen (3x10)",
+    "Ausfallschritt-Sprünge (3x8 pro Seite)",
+    "Wadenheben einbeinig (3x15)",
+    "Plank (3x45 Sek.)"
+  ];
+
+  // Fortgeschrittene Plyometrie (höherer Umfang)
+  const plyoAdvanced = [
+    "Depth Jumps (3x6)",
+    "Bounding (3x10 Kontakte)",
+    "Single-Leg Hops (3x10 pro Seite)",
+    "Tuck Jumps (3x8)",
+    "Bulgarian Split Squat Jumps (3x6 pro Seite)"
+  ];
+
+  // Equipment-spezifische Ergänzungen
+  const equipmentExercises: Record<string, string[]> = {
+    'Keines': [
+      "Pistol Squats (3x5 pro Seite)",
+      "Nordic Curls (3x6)",
+      "Glute Bridge einbeinig (3x12)",
+      "Mountain Climbers (3x30 Sek.)"
+    ],
+    'Gewichte': [
+      "Kurzhantel-Kniebeugen (3x12)",
+      "Romanian Deadlifts (3x10)",
+      "Kurzhantel-Ausfallschritte (3x10 pro Seite)",
+      "Kettlebell Swings (3x15)"
+    ],
+    'Gym': [
+      "Langhantel-Kniebeugen (4x8)",
+      "Kreuzheben (3x8)",
+      "Beinpresse (3x12)",
+      "Leg Curls (3x12)",
+      "Hip Thrusts (3x10)"
+    ]
+  };
+
+  const useAdvanced = weeklyKm > 40 || distance === 'Marathon' || distance === 'Halbmarathon';
+  const plyoExercises = useAdvanced ? [...plyoBasic, ...plyoAdvanced.slice(0, 2)] : plyoBasic;
+  const eqExercises = equipmentExercises[equipment] || equipmentExercises['Keines'];
+
+  return `
+    KRAFTTRAINING (Plyometrie-Fokus für Läufer):
+    - Equipment: ${equipment === 'Keines' ? 'Bodyweight/Eigengewicht' : equipment === 'Gewichte' ? 'Kurzhanteln/Kettlebells Zuhause' : 'Fitnessstudio mit vollem Equipment'}
+    - 1-2 Krafteinheiten pro Woche, NICHT an Tagen mit intensiven Laufeinheiten
+    - Plyometrie-Übungen zur Verbesserung der Laufökonomie: ${plyoExercises.slice(0, 4).join(', ')}
+    - Ergänzende Kräftigung: ${eqExercises.slice(0, 3).join(', ')}
+    - Bei Marathon/HM: Krafttraining im Tapering um 50% reduzieren
+    - WICHTIG: Im Detail-Feld konkrete Übungen mit Sets/Reps auflisten!`;
+};
+
 export async function POST(req: Request) {
   try {
     const data = await req.json();
@@ -13,7 +117,6 @@ export async function POST(req: Request) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Beibehaltung des spezifischen 2.0 Flash Lite Modells
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
     // 1. Wochenberechnung
@@ -26,46 +129,74 @@ export async function POST(req: Request) {
 
     // 2. Dynamische Intensitäts-Logik
     const intensityInstruction = data.useHeartRate && data.maxHR > 0
-      ? `RECHNE EXAKT: Berechne für jede Einheit den Pulsbereich in BPM basierend auf dem Maximalpuls von ${data.maxHR}. (Beispiel: Statt 70% schreibe "133-140 BPM"). Verwende verschiedene Session-Typen: easy, long, tempo (Schwelle), intervals (Intervalle), recovery.`
-      : `RPE-SKALA NUTZEN: Da keine Pulsuhr vorhanden ist, gib für jede Einheit eine Intensität auf der RPE-Skala von 0 bis 10 an (z.B. "Intensität: 7/10 - Harte Belastung"). Verwende verschiedene Session-Typen: easy, long, tempo (Schwelle), intervals (Intervalle), recovery.`;
+      ? `HERZFREQUENZ-BERECHNUNG: Berechne für jede Einheit den Pulsbereich in BPM basierend auf Max-HR ${data.maxHR} und Ruhe-HR ${data.restHR || 60}. Nutze Karvonen-Formel. Beispiel: Zone 2 = 60-70% HRR = konkrete BPM angeben.`
+      : `RPE-SKALA: Da keine Pulsuhr vorhanden, gib für jede Einheit RPE von 1-10 an (z.B. "RPE 6 - moderate Belastung").`;
 
-    // 3. Verschärfter Prompt
+    // 3. Zone-2 Pace Integration
+    const zone2Info = data.zone2Pace
+      ? `Zone-2 Referenz-Pace: ${String(data.zone2Pace.m || '6').padStart(2, '0')}:${String(data.zone2Pace.s || '00').padStart(2, '0')} min/km (bei ${data.zone2Type === 'hr' ? '70% HF' : 'RPE ' + (data.zone2Value || '6') + '/10'}). Nutze dies als Basis für Easy Runs.`
+      : '';
+
+    // 4. Distanz-spezifischer Prompt
+    const distanceSpecificPrompt = distancePrompts[data.distance] || distancePrompts['10km'];
+
+    // 5. Krafttraining-Subprompt
+    const strengthPrompt = data.includeStrength
+      ? getStrengthPrompt(data.equipment || 'Keines', data.distance, parseInt(data.targetWeeklyKm) || 30)
+      : 'KEIN Krafttraining im Plan. Nur Laufeinheiten und Ruhetage.';
+
+    // 6. Modularer Haupt-Prompt
     const prompt = `
       STRENGSTENS VERBOTEN: Gib keinen Einleitungstext, keine Erklärungen und keine Schlussworte aus. 
       Deine gesamte Antwort MUSS ein einziges, valides JSON-Objekt sein.
       Beginne deine Antwort direkt mit '{' und beende sie mit '}'.
 
-      ROLLE: Du bist ein Elite-Lauftrainer. Erstelle einen Trainingsplan für exakt ${weeksToGenerate} Wochen.
-      ZIEL: ${data.distance} mit angestrebter Zeit ${data.targetTime?.h || '00'}:${data.targetTime?.m || '00'}:${data.targetTime?.s || '00'}.
+      ROLLE: Du bist ein Elite-Lauftrainer mit 20+ Jahren Erfahrung.
       
-      STRUKTUR-VORGABEN:
+      ATHLETEN-PROFIL:
+      - Zieldistanz: ${data.distance}
+      - Zielzeit: ${data.targetTime?.h || '00'}:${data.targetTime?.m || '00'}:${data.targetTime?.s || '00'}
+      - Aktueller Wochenumfang: ${data.currentWeeklyVolume || '20'} km
+      - Ziel-Wochenumfang: ${data.targetWeeklyKm || '35'} km
+      - Trainingstage pro Woche: ${data.daysPerWeek || 3}
+      - ${zone2Info}
+      
+      ${distanceSpecificPrompt}
+      
+      ${strengthPrompt}
+      
+      STRUKTUR-VORGABEN (Plan für ${weeksToGenerate} Wochen):
       1. Jede Woche MUSS exakt 7 Tage (Montag bis Sonntag) enthalten.
-      2. Nur die Aktivitäten "Laufen" und "Krafttraining" sind erlaubt. Keine anderen Sportarten.
-      3. Der Longrun (längster Lauf der Woche) MUSS zwingend am ${data.longRunDay} stattfinden.
-      4. Mindestens 1-2 Ruhetage pro Woche einplanen (Activity: "Ruhetag").
-      5. Baue pro Woche mindestens eine Tempo-/Schwellen-Einheit ODER Intervalle ein (abwechselnd über die Wochen). Der Plan MUSS also nicht nur gleiches Tempo reproduzieren.
-      6. Wenn der Nutzer Krafttraining aktiviert hat (data.includeStrength === true), füge 1-2 Krafttrainingseinheiten pro Woche hinzu (Activity: "Krafttraining") und liste konkrete Übungen im dem Detail-Feld (z.B. "3x12 Kniebeugen, 3x10 Ausfallschritte, 3xPlank 60s").
+      2. Erlaubte Aktivitäten: "Laufen", "Krafttraining", "Ruhetag"
+      3. Der Longrun MUSS am ${data.longRunDay || 'Sonntag'} stattfinden.
+      4. Mindestens 1-2 Ruhetage pro Woche (Activity: "Ruhetag", Detail: "Aktive Erholung").
+      5. Pro Woche: 1x Tempo/Schwelle ODER 1x Intervalle (abwechselnd).
+      6. DISTANZ IMMER MIT "km" ANGEBEN (z.B. "10km", nicht "10 Kilometer").
       
       INTENSITÄTS-LOGIK:
       - ${intensityInstruction}
-      - Gib für JEDE Laufeinheit eine konkrete Pace-Empfehlung in min/km an (basierend auf aktueller Pace ${data.currentPace || '06:00'}). Verwende für Intervalle und Tempo klare Vorgaben (z.B. "6x800m @ 04:10/km" oder "20min Schwelle @ 04:30/km").
-      - Bei Krafttraining: Liste konkrete Übungen im Detail-Feld auf (z.B. 3x12 Kniebeugen, Ausfallschritte, Planks).
+      - Gib für JEDE Laufeinheit konkrete Pace in min/km an.
+      - Basispace (Easy): ${data.zone2Pace ? `${data.zone2Pace.m}:${data.zone2Pace.s}` : (data.currentPace || '06:00')} min/km
       
-      JSON-FORMAT:
+      JSON-FORMAT (EXAKT so strukturieren):
       {
         "target": "${data.distance}",
-        "targetPace": "${data.currentPace}",
-        "targetTime": "${data.targetTime.h}:${data.targetTime.m}:${data.targetTime.s}",
+        "targetPace": "${data.currentPace || '06:00'}",
+        "targetTime": "${data.targetTime?.h || '00'}:${data.targetTime?.m || '00'}:${data.targetTime?.s || '00'}",
         "weeks": [
           {
             "weekNumber": 1,
+            "weeklyKm": 25,
             "days": [
-              { "day": "Montag", "activity": "Laufen", "intensity": "...", "detail": "..." }
+              { "day": "Montag", "activity": "Laufen", "intensity": "Zone 2 / 140-150 BPM", "detail": "8km Easy @ 06:00/km" },
+              { "day": "Dienstag", "activity": "Krafttraining", "intensity": "Mittel", "detail": "Box Jumps 3x8, Kniebeugen 3x12, Plank 3x45s" },
+              { "day": "Mittwoch", "activity": "Ruhetag", "intensity": "leicht", "detail": "Aktive Erholung" }
             ]
           }
         ]
       }
     `;
+
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -75,7 +206,7 @@ export async function POST(req: Request) {
     try {
       const startJson = text.indexOf('{');
       const endJson = text.lastIndexOf('}') + 1;
-      
+
       if (startJson === -1 || endJson === -1) {
         throw new Error("Kein gültiges JSON im Text gefunden");
       }
@@ -92,7 +223,7 @@ export async function POST(req: Request) {
           if (m && m[1]) return parseFloat(m[1]);
           const m2 = s.match(/([0-9]+(?:\.[0-9]+)?)\s?k\b/i);
           if (m2 && m2[1]) return parseFloat(m2[1]);
-        } catch (e) {}
+        } catch (e) { }
         return 0;
       };
 
@@ -119,7 +250,7 @@ export async function POST(req: Request) {
       // 5. DEBUG-SCHLEIFE IM TERMINAL
       console.log("--- DEBUG START ---");
       console.log("Anzahl generierter Wochen:", planData.weeks?.length);
-      console.dir(planData, { depth: null }); 
+      console.dir(planData, { depth: null });
       console.log("--- DEBUG ENDE ---");
 
       // Debug-Info für das PDF
