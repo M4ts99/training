@@ -117,7 +117,8 @@ export async function POST(req: Request) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    // Upgrade auf Gemini 2.0 Flash (Full) für besseres Reasoning bei komplexen Trainingsplänen
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     // 1. Wochenberechnung
     let weeksToGenerate = parseInt(data.planWeeks) || 8;
@@ -173,10 +174,15 @@ export async function POST(req: Request) {
       5. Pro Woche: 1x Tempo/Schwelle ODER 1x Intervalle (abwechselnd).
       6. DISTANZ IMMER MIT "km" ANGEBEN (z.B. "10km", nicht "10 Kilometer").
       
-      INTENSITÄTS-LOGIK:
+      INTENSITÄTS-LOGIK (WICHTIG - PACE VARIATION):
       - ${intensityInstruction}
       - Gib für JEDE Laufeinheit konkrete Pace in min/km an.
-      - Basispace (Easy): ${data.zone2Pace ? `${data.zone2Pace.m}:${data.zone2Pace.s}` : (data.currentPace || '06:00')} min/km
+      - Basispace (Easy / Zone 2): ${data.zone2Pace ? `${data.zone2Pace.m}:${data.zone2Pace.s}` : (data.currentPace || '06:00')} min/km
+      - INTERVALLE MÜSSEN SCHNELLER SEIN:
+        * 1km Intervalle = Basispace MINUS 45-60 Sekunden (z.B. Zone 2 6:00 -> Intervalle 5:00-5:15)
+        * 400m/800m Intervalle = Basispace MINUS 60-90 Sekunden
+        * Tempoläufe (Threshold) = Basispace MINUS 30-45 Sekunden
+      - Variiere die Pace! Ein Plan darf NICHT nur aus Zone 2 bestehen.
       
       JSON-FORMAT (EXAKT so strukturieren):
       {
@@ -257,7 +263,7 @@ export async function POST(req: Request) {
       const debug = {
         inputTokens: response.usageMetadata?.promptTokenCount || 0,
         outputTokens: response.usageMetadata?.candidatesTokenCount || 0,
-        model: "gemini-2.0-flash-lite"
+        model: "gemini-2.0-flash"
       };
 
       return NextResponse.json({ ...planData, debug });
