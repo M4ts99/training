@@ -177,12 +177,13 @@ export async function POST(req: Request) {
       INTENSITÄTS-LOGIK (WICHTIG - PACE VARIATION):
       - ${intensityInstruction}
       - Gib für JEDE Laufeinheit konkrete Pace in min/km an.
-      - Basispace (Easy / Zone 2): ${data.zone2Pace ? `${data.zone2Pace.m}:${data.zone2Pace.s}` : (data.currentPace || '06:00')} min/km
-      - INTERVALLE MÜSSEN SCHNELLER SEIN:
-        * 1km Intervalle = Basispace MINUS 45-60 Sekunden (z.B. Zone 2 6:00 -> Intervalle 5:00-5:15)
-        * 400m/800m Intervalle = Basispace MINUS 60-90 Sekunden
-        * Tempoläufe (Threshold) = Basispace MINUS 30-45 Sekunden
-      - Variiere die Pace! Ein Plan darf NICHT nur aus Zone 2 bestehen.
+      - **Easy Runs / Long Runs:** Basispace = ${data.zone2Pace ? `${data.zone2Pace.m}:${data.zone2Pace.s}` : (data.currentPace || '06:00')} min/km
+      - **Qualitäts-Einheiten (MÜSSEN schneller als Renntempo sein):**
+        * Ermittle zuerst das Renntempo (Race Pace) aus Zielzeit ${data.targetTime?.h || '00'}:${data.targetTime?.m || '00'}:${data.targetTime?.s || '00'} auf ${data.distance}.
+        * *Tempoläufe (Threshold):* Renntempo MINUS 10-20 Sekunden/km
+        * *Intervalle (1km+):* Renntempo MINUS 30-45 Sekunden/km
+        * *Kurze Intervalle (400m):* Renntempo MINUS 45-60 Sekunden/km
+      - FEHLER-PRÜFUNG: Wenn Intervalle langsamer sind als das Renntempo, ist der Plan FALSCH!
       
       JSON-FORMAT (EXAKT so strukturieren):
       {
