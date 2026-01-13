@@ -19,6 +19,27 @@ const styles = StyleSheet.create({
     fontSize: 7,
     color: '#555'
   },
+  assessmentBox: {
+    padding: 10,
+    marginTop: 10,
+    marginBottom: 20,
+    backgroundColor: '#111',
+    borderLeftWidth: 3,
+    borderLeftColor: '#EA580C'
+  },
+  assessmentTitle: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#EA580C',
+    marginBottom: 5,
+    textTransform: 'uppercase'
+  },
+  assessmentText: {
+    fontSize: 9,
+    color: '#ddd',
+    lineHeight: 1.4,
+    fontStyle: 'italic'
+  },
   header: {
     marginBottom: 20,
     borderBottomWidth: 2,
@@ -215,6 +236,13 @@ export function PlanPDF({ data }: { data: any }) {
                 <Text style={styles.subtitle}>Ziel Distanz: {data.target || data.distance || '-'}</Text>
                 <Text style={styles.subtitle}>Ziel Zeit: {data.targetTime || data.targetTimeFormatted || '--:--:--'}</Text>
                 <Text style={styles.subtitle}>Ziel Pace: {data.targetPace || computePace(data) || '--:--'} min/km</Text>
+
+                {data.assessment && (
+                  <View style={styles.assessmentBox}>
+                    <Text style={styles.assessmentTitle}>REALITY CHECK</Text>
+                    <Text style={styles.assessmentText}>{data.assessment}</Text>
+                  </View>
+                )}
               </>
             ) : (
               <Text style={styles.subtitle}>{data.target || data.distance || ''}</Text>

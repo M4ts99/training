@@ -162,9 +162,20 @@ export async function POST(req: Request) {
         const peak = endKm;
         km = taperStep === 0 ? peak * 0.7 : peak * 0.5;
       }
-      volumeSchedule.push(`Woche ${i + 1}: ca. ${Math.round(km)} km`);
+      volumeSchedule.push(`Woche ${i + 1}: MINIMUM ${Math.round(km)} km (exakt +/- 2km treffen!)`);
     }
     const volumeString = volumeSchedule.join('\n      ');
+
+    // Reality-Check / Assessment Prompt
+    const formatTime = (t: any) => t && (t.h || t.m) ? `${t.h}:${t.m}:${t.s}` : 'Keine Angabe';
+    const assessmentPrompt = `
+      REALITY-CHECK & EINSCHÄTZUNG:
+      Erstelle eine ehrliche, direkte Einschätzung (max. 2-3 Sätze) für den Athleten:
+      - Ist das Ziel (${data.distance} in ${formatTime(data.targetTime)}) realistisch?
+      - Basis: Aktuelle PRs (5k: ${formatTime(data.pr5k)}, 10k: ${formatTime(data.pr10k)}) und Wochenumfang (${data.currentWeeklyVolume}km).
+      - Wenn unrealistisch, gib eine Warnung aber erstelle trotzdem den Plan "so gut wie möglich".
+      - Gib diese Einschätzung im JSON-Feld "assessment" zurück.
+    `;
 
     // 5. Krafttraining-Subprompt
     const strengthPrompt = data.includeStrength
@@ -191,6 +202,8 @@ export async function POST(req: Request) {
       
       ${strengthPrompt}
       
+      ${assessmentPrompt}
+      
       STRUKTUR-VORGABEN (Plan für ${weeksToGenerate} Wochen):
       1. Jede Woche MUSS exakt 7 Tage (Montag bis Sonntag) enthalten.
       2. Erlaubte Aktivitäten: "Laufen", "Krafttraining", "Ruhetag"
@@ -200,10 +213,10 @@ export async function POST(req: Request) {
       6. DISTANZ IMMER MIT "km" ANGEBEN (z.B. "10km", nicht "10 Kilometer").
       
       WOCHEN-PENSA (NICHT UNTERSCHREITEN!):
-      Die Summe der einzelnen Laufeinheiten MUSS den folgenden Vorgaben entsprechen (+/- 10% Toleranz):
+      Die Summe der einzelnen Laufeinheiten MUSS den folgenden Vorgaben entsprechen (Toleranz max +/- 2km!):
       ${volumeString}
       
-      RECHEN-CHECK: Addiere VOR der Ausgabe jeder Woche die km der einzelnen Tage. Wenn Summe < Vorgabe, verlängere den Longrun oder den Easy Run!
+      RECHEN-CHECK: Summiere VOR Ausgabe die Tage. Falls Summe < Vorgabe, erhöhe Longrun oder füge Recovery Run hinzu!
       
       INTENSITÄTS-LOGIK (WICHTIG - PACE VARIATION):
       - ${intensityInstruction}
@@ -219,6 +232,7 @@ export async function POST(req: Request) {
       JSON-FORMAT (EXAKT so strukturieren):
       {
         "target": "${data.distance}",
+        "assessment": "Deine ehrliche Einschätzung hier...",
         "targetPace": "${data.currentPace || '06:00'}",
         "targetTime": "${data.targetTime?.h || '00'}:${data.targetTime?.m || '00'}:${data.targetTime?.s || '00'}",
         "weeks": [
