@@ -141,6 +141,31 @@ export async function POST(req: Request) {
     // 4. Distanz-spezifischer Prompt
     const distanceSpecificPrompt = distancePrompts[data.distance] || distancePrompts['10km'];
 
+    // 4b. Volumen-Progression berechnen (Linear + Tapering)
+    const startKm = parseInt(data.currentWeeklyVolume) || 20;
+    const endKm = parseInt(data.targetWeeklyKm) || 35;
+    const volumeSchedule = [];
+
+    // Tapering-Logik: Letzte 2 Wochen reduziert
+    const taperWeeks = data.distance === 'Marathon' || data.distance === 'Halbmarathon' ? 2 : 1;
+    const buildWeeks = Math.max(1, weeksToGenerate - taperWeeks);
+
+    for (let i = 0; i < weeksToGenerate; i++) {
+      let km = 0;
+      if (i < buildWeeks) {
+        // Linearer Aufbau bis zum Peak
+        if (buildWeeks === 1) km = endKm;
+        else km = startKm + ((endKm - startKm) / (buildWeeks - 1)) * i;
+      } else {
+        // Tapering: Reduktion auf 70% dann 50% vom Peak
+        const taperStep = i - buildWeeks;
+        const peak = endKm;
+        km = taperStep === 0 ? peak * 0.7 : peak * 0.5;
+      }
+      volumeSchedule.push(`Woche ${i + 1}: ca. ${Math.round(km)} km`);
+    }
+    const volumeString = volumeSchedule.join('\n      ');
+
     // 5. Krafttraining-Subprompt
     const strengthPrompt = data.includeStrength
       ? getStrengthPrompt(data.equipment || 'Keines', data.distance, parseInt(data.targetWeeklyKm) || 30)
@@ -158,7 +183,7 @@ export async function POST(req: Request) {
       - Zieldistanz: ${data.distance}
       - Zielzeit: ${data.targetTime?.h || '00'}:${data.targetTime?.m || '00'}:${data.targetTime?.s || '00'}
       - Aktueller Wochenumfang: ${data.currentWeeklyVolume || '20'} km
-      - Ziel-Wochenumfang: ${data.targetWeeklyKm || '35'} km
+      - Ziel-Wochenumfang (Peak): ${data.targetWeeklyKm || '35'} km
       - Trainingstage pro Woche: ${data.daysPerWeek || 3}
       - ${zone2Info}
       
@@ -173,6 +198,12 @@ export async function POST(req: Request) {
       4. Mindestens 1-2 Ruhetage pro Woche (Activity: "Ruhetag", Detail: "Aktive Erholung").
       5. Pro Woche: 1x Tempo/Schwelle ODER 1x Intervalle (abwechselnd).
       6. DISTANZ IMMER MIT "km" ANGEBEN (z.B. "10km", nicht "10 Kilometer").
+      
+      WOCHEN-PENSA (NICHT UNTERSCHREITEN!):
+      Die Summe der einzelnen Laufeinheiten MUSS den folgenden Vorgaben entsprechen (+/- 10% Toleranz):
+      ${volumeString}
+      
+      RECHEN-CHECK: Addiere VOR der Ausgabe jeder Woche die km der einzelnen Tage. Wenn Summe < Vorgabe, verlängere den Longrun oder den Easy Run!
       
       INTENSITÄTS-LOGIK (WICHTIG - PACE VARIATION):
       - ${intensityInstruction}
